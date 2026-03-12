@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c \"\nimport sys, traceback\ntry:\n    from tray import _generate_icon\n    from tray import TrayManager\n    print\\('tray OK'\\)\n    from hotkey import HotkeyListener\n    print\\('hotkey OK'\\)\n    from clipboard_monitor import ClipboardMonitor\n    print\\('clipboard_monitor OK'\\)\n    from database import Database\n    print\\('database OK'\\)\n    from startup import check_startup_prompt\n    print\\('startup OK'\\)\n    from ui.main_window import MainWindow\n    print\\('main_window OK'\\)\nexcept Exception as e:\n    traceback.print_exc\\(\\)\n\" 2>&1)"
+    ]
+  }
+}
