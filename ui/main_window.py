@@ -66,7 +66,7 @@ QLineEdit:focus { border-color: #89b4fa; }
 
 QListWidget { background: #181825; border: 1px solid #313244;
               border-radius: 6px; outline: none; }
-QListWidget::item          { padding: 8px 10px; border-bottom: 1px solid #2a2a3d; }
+QListWidget::item          { padding: 3px 10px; border-bottom: 1px solid #2a2a3d; }
 QListWidget::item:selected { background: #313244; color: #89b4fa; }
 QListWidget::item:hover    { background: #252535; }
 
@@ -263,7 +263,7 @@ class MainWindow(QMainWindow):
         self._hist_list.setAlternatingRowColors(False)
         self._hist_list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self._hist_list.customContextMenuRequested.connect(self._history_context_menu)
-        self._hist_list.itemClicked.connect(self._copy_history_item)
+        self._hist_list.itemClicked.connect(self._copy_and_paste_history_item)
         self._hist_list.setToolTip("Click to copy  •  Right-click for options")
         lay.addWidget(self._hist_list)
 
@@ -361,18 +361,20 @@ class MainWindow(QMainWindow):
             entry_id, content, copied_at, frequency = (
                 row[0], row[1], row[2], row[3],
             )
-            preview = content[:80].replace("\n", " ↵ ")
-            if len(content) > 80:
-                preview += "…"
+            first_line = content.split("\n")[0]
+            if len(first_line) > 120:
+                first_line = first_line[:120] + "…"
+            elif len(content) > len(first_line):
+                first_line += "…"
 
             ts = copied_at[:16] if copied_at and len(copied_at) >= 16 else (copied_at or "")
-            freq = f"  ×{frequency}" if frequency > 1 else ""
-            display = f"{preview}\n{ts}{freq}"
+            freq_str = f"  ×{frequency}" if frequency > 1 else ""
+            tooltip = content + f"\n\n— {ts}{freq_str}"
 
-            item = QListWidgetItem(display)
+            item = QListWidgetItem(first_line)
             item.setData(Qt.ItemDataRole.UserRole, entry_id)
             item.setData(Qt.ItemDataRole.UserRole + 1, content)
-            item.setToolTip(content[:600])
+            item.setToolTip(tooltip)
             self._hist_list.addItem(item)
 
     def _copy_history_item(self, item: QListWidgetItem):
@@ -383,10 +385,26 @@ class MainWindow(QMainWindow):
             QApplication.clipboard().setText(content)
             self.statusBar().showMessage("Copied!", 1500)
 
+    def _copy_and_paste_history_item(self, item: QListWidgetItem):
+        content = item.data(Qt.ItemDataRole.UserRole + 1)
+        if content:
+            if self._monitor:
+                self._monitor.ignore_next_change()
+            QApplication.clipboard().setText(content)
+            self.hide()
+            QTimer.singleShot(150, self._paste_to_active_window)
+
+    def _paste_to_active_window(self):
+        from pynput.keyboard import Controller, Key
+        kb = Controller()
+        with kb.pressed(Key.ctrl):
+            kb.press("v")
+            kb.release("v")
+
     def _copy_selected_history(self):
         selected = self._hist_list.selectedItems()
         if selected:
-            self._copy_history_item(selected[0])
+            self._copy_and_paste_history_item(selected[0])
 
     def _history_context_menu(self, pos):
         item = self._hist_list.itemAt(pos)

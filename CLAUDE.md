@@ -38,7 +38,7 @@ ClipVault is a Windows-only system-tray utility with two features: clipboard his
 - **`clipboard_monitor.py`** — prefers `win32clipboard`; falls back to `pyperclip`; calls `monitor.ignore_next_change()` before programmatic clipboard writes to avoid self-loops
 - **`expander.py`** — builds a rolling character buffer; on Space/Tab checks the buffer tail against all shortcodes via `db.get_shortcodes_dict()`; if matched, sends Backspace×(len+1) then `controller.type(expansion)`. The `_expanding` flag prevents re-entrancy while injecting keys.
 - **`tray.py`** — `TrayManager`; also contains `_generate_icon()` which creates `assets/icon.png` via Pillow if missing
-- **`startup.py`** — reads/writes `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`
+- **`startup.py`** — reads/writes `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`; copies exe to `%LOCALAPPDATA%\ClipVault\ClipVault.exe` before registering, so Windows can launch it at boot before Dropbox's filesystem driver loads (Dropbox `ReparsePoint` files silently fail at boot)
 - **`ui/main_window.py`** — `QMainWindow` with two tabs; `closeEvent` hides instead of quitting; `on_clipboard_change()` emits `_signals.refresh_history` (pyqtSignal, safe cross-thread)
 - **`ui/expander_ui.py`** — `ShortcodeDialog` (add/edit)
 - **`ui/settings_dialog.py`** — Settings window (Windows startup toggle)

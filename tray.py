@@ -53,7 +53,8 @@ class TrayManager:
     # ------------------------------------------------------------------ #
 
     def _load_or_generate_icon(self) -> Image.Image:
-        path = Path("assets") / "icon.png"
+        from main import get_assets_dir
+        path = get_assets_dir() / "icon.png"
         if path.exists():
             return Image.open(path)
         return _generate_icon()
@@ -109,7 +110,7 @@ def _generate_icon(size: int = 64) -> Image.Image:
         draw.rectangle([20, y, 44, y + 2], fill="#1976D2")
 
     # Save for future runs
-    path = Path("assets") / "icon.png"
-    path.parent.mkdir(exist_ok=True)
+    from main import get_assets_dir
+    path = get_assets_dir() / "icon.png"
     img.save(str(path))
     return img

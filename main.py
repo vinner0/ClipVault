@@ -15,7 +15,28 @@ Build standalone .exe:
 import logging
 import os
 import sys
+import traceback
+from datetime import datetime
 from pathlib import Path
+
+
+def get_app_dir() -> Path:
+    """Return the directory containing the application files.
+
+    - Frozen (PyInstaller --onefile): sys._MEIPASS (temp extraction dir)
+    - Frozen (PyInstaller --onedir):  directory of sys.executable
+    - Development:                    directory of this script
+    """
+    if getattr(sys, "frozen", False):
+        return Path(getattr(sys, "_MEIPASS", Path(sys.executable).parent))
+    return Path(__file__).parent
+
+
+def get_assets_dir() -> Path:
+    """Return the path to the assets directory, creating it if needed."""
+    d = get_app_dir() / "assets"
+    d.mkdir(parents=True, exist_ok=True)
+    return d
 
 
 # ------------------------------------------------------------------ #
@@ -31,14 +52,29 @@ def _setup_logging():
         format="%(asctime)s  %(levelname)-8s  %(name)s: %(message)s",
     )
 
+    # Capture any unhandled exception to the log file (critical for --noconsole builds)
+    def _excepthook(exc_type, exc_value, exc_tb):
+        logging.error(
+            "Unhandled exception — app crashed",
+            exc_info=(exc_type, exc_value, exc_tb),
+        )
+
+    sys.excepthook = _excepthook
+
+    # Write a startup marker so we can confirm the exe ran even if it crashes early
+    try:
+        with open(log_dir / "startup.log", "a") as f:
+            f.write(f"[{datetime.now():%Y-%m-%d %H:%M:%S}] ClipVault starting (PID {os.getpid()})\n")
+    except Exception:
+        pass
+
 
 # ------------------------------------------------------------------ #
 # Icon — generate assets/icon.png on first run if missing            #
 # ------------------------------------------------------------------ #
 
 def _ensure_icon():
-    path = Path("assets") / "icon.png"
-    path.parent.mkdir(exist_ok=True)
+    path = get_assets_dir() / "icon.png"
     if not path.exists():
         from tray import _generate_icon
         _generate_icon()
@@ -81,11 +117,17 @@ def main():
 
     # Global text-expander keyboard hook
     expander = TextExpander(db)
-    expander.start()
+    try:
+        expander.start()
+    except Exception:
+        logging.error("TextExpander failed to start", exc_info=True)
 
     # Global hotkey  Ctrl+Shift+V → show window
     hotkey = HotkeyListener(on_trigger=window.show_and_focus)
-    hotkey.start()
+    try:
+        hotkey.start()
+    except Exception:
+        logging.error("HotkeyListener failed to start", exc_info=True)
 
     # System tray (runs in its own daemon thread via run_detached)
     tray = TrayManager(window, app)

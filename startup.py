@@ -11,9 +11,34 @@ _RUN_KEY = r"Software\Microsoft\Windows\CurrentVersion\Run"
 _SETTINGS_KEY = r"Software\ClipVault"
 _APP_NAME = "ClipVault"
 
+# Install location for the exe — must be outside Dropbox/OneDrive so Windows
+# can launch it at boot before any cloud-sync filesystem driver has loaded.
+_LOCAL_EXE_DIR = Path(os.environ.get("LOCALAPPDATA", ".")) / "ClipVault"
+_LOCAL_EXE = _LOCAL_EXE_DIR / "ClipVault.exe"
+
+
+def _install_exe_locally() -> bool:
+    """Copy the frozen exe to %LOCALAPPDATA%\\ClipVault\\ if running from Dropbox/cloud.
+    Returns True on success, False if copy failed."""
+    if not getattr(sys, "frozen", False):
+        return False
+    src = Path(sys.executable)
+    if src == _LOCAL_EXE:
+        return True  # already running from local install
+    try:
+        _LOCAL_EXE_DIR.mkdir(parents=True, exist_ok=True)
+        import shutil
+        shutil.copy2(src, _LOCAL_EXE)
+        return True
+    except Exception:
+        return False
+
 
 def _exe_path() -> str:
     if getattr(sys, "frozen", False):
+        # Always register the local copy so boot works without Dropbox loaded
+        if _LOCAL_EXE.exists() or _install_exe_locally():
+            return f'"{_LOCAL_EXE}"'
         return f'"{sys.executable}"'
     main_py = Path(__file__).parent / "main.py"
     return f'"{sys.executable}" "{main_py}"'

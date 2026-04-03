@@ -55,9 +55,22 @@ if errorlevel 1 (
 )
 
 echo.
+
+:: Step 4: Copy exe to local install dir (outside Dropbox) for reliable auto-startup
+echo [4/4] Installing to %%LOCALAPPDATA%%\ClipVault\ ...
+if not exist "%LOCALAPPDATA%\ClipVault" mkdir "%LOCALAPPDATA%\ClipVault"
+copy /y "dist\ClipVault.exe" "%LOCALAPPDATA%\ClipVault\ClipVault.exe"
+if errorlevel 1 (
+    echo WARNING: Could not copy to local install dir. Auto-startup may not work.
+) else (
+    echo Installed: %LOCALAPPDATA%\ClipVault\ClipVault.exe
+)
+
+echo.
 echo ============================================
 echo  Build complete!
 echo  Output: dist\ClipVault.exe
+echo  Local:  %LOCALAPPDATA%\ClipVault\ClipVault.exe
 echo ============================================
 echo.
 pause
